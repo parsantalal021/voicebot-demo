@@ -25,7 +25,6 @@ def fail(message: str, status: int = 400):
     return JSONResponse(status_code=status, content={"data": None, "error": {"message": message}})
 
 
-# ─── GET /patients  &  GET /patients/ ────────────────────────────────────────
 @router.get("")
 @router.get("/")
 def route_list_patients(
@@ -40,8 +39,6 @@ def route_list_patients(
     )
     return ok({"patients": patients, "total": len(patients)})
 
-
-# ─── GET /patients/{id} ───────────────────────────────────────────────────────
 @router.get("/{patient_id}")
 def route_get_patient(patient_id: str):
     patient = get_patient(patient_id)
@@ -49,8 +46,6 @@ def route_get_patient(patient_id: str):
         return fail("Patient not found", 404)
     return ok({"patient": patient})
 
-
-# ─── POST /patients  &  POST /patients/ ──────────────────────────────────────
 @router.post("")
 @router.post("/")
 def route_create_patient(body: PatientCreate):
@@ -62,7 +57,6 @@ def route_create_patient(body: PatientCreate):
         return fail("Failed to create patient record", 500)
 
 
-# ─── PUT /patients/{id} ───────────────────────────────────────────────────────
 @router.put("/{patient_id}")
 def route_update_patient(patient_id: str, body: PatientUpdate):
     patient = update_patient(patient_id, body)
@@ -71,7 +65,6 @@ def route_update_patient(patient_id: str, body: PatientUpdate):
     return ok({"patient": patient})
 
 
-# ─── DELETE /patients/{id} ────────────────────────────────────────────────────
 @router.delete("/{patient_id}")
 def route_delete_patient(patient_id: str):
     success = delete_patient(patient_id)
