@@ -7,7 +7,7 @@ import logging
 import uuid
 from datetime import datetime, timezone
 from typing import Optional
-
+import re
 from app.database import get_db
 from app.schemas import PatientCreate, PatientUpdate
 
