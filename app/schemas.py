@@ -19,9 +19,10 @@ US_STATES = {
     "VA","WA","WV","WI","WY","DC",
 }
 
-PHONE_RE  = re.compile(r"^\d{10}$")
+# PHONE_RE used to enforce 10-digit U.S. numbers; replaced by more flexible logic below
 ZIP_RE    = re.compile(r"^\d{5}(-\d{4})?$")
-NAME_RE   = re.compile(r"^[a-zA-Z\-']{1,50}$")
+# name regex previously limited to A–Z; new validator allows international letters
+NAME_RE   = None
 
 
 class SexEnum(str, Enum):
@@ -34,14 +35,26 @@ class SexEnum(str, Enum):
 # ─── Helpers ──────────────────────────────────────────────────────────────────
 
 def normalize_phone(value: Optional[str]) -> Optional[str]:
-    """Strip non-digits, remove leading country code 1 if present, validate 10 digits."""
+    """Normalize a phone string for storage.
+
+    - Trims whitespace and strips all characters except digits. A leading plus
+      sign will be preserved (converted to "+" followed by digits).
+    - No hard-coded length restriction is applied; callers should ensure at
+      least a minimal number of digits (e.g. 7) if desired.
+    - This allows E.164-style international numbers such as "+447911123456"
+      and domestic numbers like "4155551234".
+    """
     if value is None:
         return None
-    digits = re.sub(r"\D", "", value)
-    if len(digits) == 11 and digits[0] == "1":
-        digits = digits[1:]
-    if len(digits) != 10:
-        raise ValueError("must be a valid 10-digit U.S. phone number")
+    v = value.strip()
+    plus = v.startswith("+")
+    digits = re.sub(r"\D", "", v)
+    if plus and digits:
+        digits = "+" + digits
+    # require at least 7 digits (arbitrary lower bound to catch obvious junk)
+    raw = digits.lstrip("+")
+    if len(raw) < 7:
+        raise ValueError("must be a valid phone number with at least 7 digits")
     return digits
 
 
@@ -99,8 +112,11 @@ class PatientCreate(BaseModel):
     @field_validator("first_name", "last_name")
     @classmethod
     def validate_name(cls, v: str) -> str:
-        if not NAME_RE.match(v):
-            raise ValueError("only letters, hyphens, and apostrophes allowed")
+        # allow up to 50 characters, reject digits
+        if len(v) < 1 or len(v) > 50:
+            raise ValueError("name must be 1–50 characters")
+        if any(ch.isdigit() for ch in v):
+            raise ValueError("name may not contain digits")
         return v
 
     @field_validator("date_of_birth", mode="before")

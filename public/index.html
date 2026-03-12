@@ -395,7 +395,7 @@ function renderTable(patients) {
 
   tbody.innerHTML = patients.map(p => {
     const sexClass = { Male:'sex-m', Female:'sex-f', Other:'sex-o', 'Decline to Answer':'sex-d' }[p.sex] || 'sex-d';
-    const phone = p.phone_number ? `(${p.phone_number.slice(0,3)}) ${p.phone_number.slice(3,6)}-${p.phone_number.slice(6)}` : '—';
+    const phone = p.phone_number || '—';
     const dob = p.date_of_birth ? new Date(p.date_of_birth + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
     const created = p.created_at ? new Date(p.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—';
     const shortId = p.patient_id?.split('-')[0].toUpperCase() || '—';
@@ -440,8 +440,8 @@ async function openModal(id) {
     const p = json.data?.patient;
     if (!p) throw new Error('Not found');
 
-    const phone = p.phone_number ? `(${p.phone_number.slice(0,3)}) ${p.phone_number.slice(3,6)}-${p.phone_number.slice(6)}` : '—';
-    const epPhone = p.emergency_contact_phone ? `(${p.emergency_contact_phone.slice(0,3)}) ${p.emergency_contact_phone.slice(3,6)}-${p.emergency_contact_phone.slice(6)}` : '—';
+    const phone = p.phone_number || '—';
+    const epPhone = p.emergency_contact_phone || '—';
     const dob = p.date_of_birth ? new Date(p.date_of_birth + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : '—';
     const created = p.created_at ? new Date(p.created_at).toLocaleString() : '—';
 

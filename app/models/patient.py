@@ -65,14 +65,20 @@ def get_patient(patient_id: str) -> Optional[dict]:
     return _row_to_dict(row)
 
 
+from app.schemas import normalize_phone
+
 def find_by_phone(phone_number: str) -> Optional[dict]:
-    """Used by Vapi for duplicate detection."""
-    import re
-    digits = re.sub(r"\D", "", phone_number)
+    """Used by Vapi for duplicate detection.  Normalize input like PatientCreate."""
+    try:
+        norm = normalize_phone(phone_number)
+    except Exception:
+        # if normalization fails, fall back to raw digits
+        import re
+        norm = re.sub(r"\D", "", phone_number)
     with get_db() as conn:
         row = conn.execute(
             "SELECT * FROM patients WHERE phone_number = ? AND deleted_at IS NULL",
-            (digits,),
+            (norm,)
         ).fetchone()
     return _row_to_dict(row)
 
