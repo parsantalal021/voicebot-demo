@@ -232,6 +232,22 @@
     .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px 32px; }
     .detail-item label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; display: block; margin-bottom: 4px; }
     .detail-item span { font-size: 0.9rem; }
+
+.detail-item input,
+.detail-item select,
+.detail-item textarea {
+  width: 100%;
+  padding: 6px 8px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+.form-actions { margin-top: 24px; display: flex; gap: 12px; }
+
+.modal-buttons { display: flex; gap: 10px; margin-bottom: 20px; }
     .detail-divider { grid-column: 1/-1; border-top: 1px solid var(--border); padding-top: 16px; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); font-weight: 700; }
     .loading { text-align: center; padding: 80px; color: var(--muted); font-size: 0.9rem; }
 
@@ -298,6 +314,7 @@
       </svg>
       <input type="text" id="search-input" placeholder="Search by name, phone, or email…" oninput="filterTable()" />
     </div>
+    <button class="btn btn-primary" onclick="openFormModal()">+ New Patient</button>
     <button class="btn btn-ghost" onclick="clearSearch()">Clear</button>
   </div>
 
@@ -429,6 +446,11 @@ async function openModal(id) {
     const created = p.created_at ? new Date(p.created_at).toLocaleString() : '—';
 
     document.getElementById('modal-body').innerHTML = `
+      <div class="modal-buttons">
+        <button class="btn btn-primary" onclick="openFormModal('${p.patient_id}')">Edit</button>
+        <button class="btn btn-ghost" onclick="deletePatient('${p.patient_id}')">Delete</button>
+      </div>
+
       <h2>${esc(p.first_name)} ${esc(p.last_name)}</h2>
       <div class="modal-id">Patient ID: ${p.patient_id}</div>
       <div class="detail-grid">
@@ -454,6 +476,11 @@ async function openModal(id) {
         <div class="detail-item"><label>Name</label><span>${esc(p.emergency_contact_name)}</span></div>
         <div class="detail-item"><label>Phone</label><span>${epPhone}</span></div>
         ` : ''}
+
+        ${p.call_transcript ? `
+        <div class="detail-divider">Call Transcript</div>
+        <div class="detail-item"><pre style="white-space:pre-wrap;word-wrap:break-word;">${esc(p.call_transcript)}</pre></div>
+        ` : ''}
       </div>
     `;
   } catch(e) {
@@ -470,6 +497,100 @@ function closeModal(e, force) {
 function esc(str) {
   if (!str) return '';
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ---- form / CRUD helpers ------------------------------------------------
+async function openFormModal(id) {
+  document.getElementById('modal-bg').classList.add('open');
+  document.getElementById('modal-body').innerHTML = '<div class="loading">Loading…</div>';
+  let patient = null;
+  if (id) {
+    try {
+      const res = await fetch(`/patients/${id}`);
+      const json = await res.json();
+      patient = json.data?.patient;
+    } catch (e) {
+      console.error(e);
+    }
+  }
+  renderForm(patient);
+}
+
+function renderForm(p) {
+  const isEdit = !!p;
+  document.getElementById('modal-body').innerHTML = `
+    <h2>${isEdit ? 'Edit Patient' : 'New Patient'}</h2>
+    <div class="modal-id">${isEdit ? 'Patient ID: ' + p.patient_id : ''}</div>
+    <form id="patient-form">
+      <div class="detail-grid">
+        <div class="detail-item"><label>First Name</label><input name="first_name" required value="${esc(p?.first_name)}" /></div>
+        <div class="detail-item"><label>Last Name</label><input name="last_name" required value="${esc(p?.last_name)}" /></div>
+        <div class="detail-item"><label>DOB</label><input type="date" name="date_of_birth" required value="${p?.date_of_birth || ''}" /></div>
+        <div class="detail-item"><label>Sex</label><select name="sex" required>
+            <option${p?.sex==='Male'?' selected':''}>Male</option>
+            <option${p?.sex==='Female'?' selected':''}>Female</option>
+            <option${p?.sex==='Other'?' selected':''}>Other</option>
+            <option${p?.sex==='Decline to Answer'?' selected':''}>Decline to Answer</option>
+          </select></div>
+        <div class="detail-item"><label>Phone</label><input name="phone_number" required value="${esc(p?.phone_number)}" /></div>
+        <div class="detail-item"><label>Email</label><input type="email" name="email" value="${esc(p?.email)}" /></div>
+        <div class="detail-item"><label>Address 1</label><input name="address_line_1" required value="${esc(p?.address_line_1)}" /></div>
+        <div class="detail-item"><label>Address 2</label><input name="address_line_2" value="${esc(p?.address_line_2)}" /></div>
+        <div class="detail-item"><label>City</label><input name="city" required value="${esc(p?.city)}" /></div>
+        <div class="detail-item"><label>State</label><input name="state" required maxlength="2" value="${esc(p?.state)}" /></div>
+        <div class="detail-item"><label>Zip</label><input name="zip_code" required value="${esc(p?.zip_code)}" /></div>
+        <div class="detail-item"><label>Insurance Provider</label><input name="insurance_provider" value="${esc(p?.insurance_provider)}" /></div>
+        <div class="detail-item"><label>Insurance Member ID</label><input name="insurance_member_id" value="${esc(p?.insurance_member_id)}" /></div>
+        <div class="detail-item"><label>Preferred Language</label><input name="preferred_language" value="${esc(p?.preferred_language)}" /></div>
+        <div class="detail-item"><label>Emergency Contact Name</label><input name="emergency_contact_name" value="${esc(p?.emergency_contact_name)}" /></div>
+        <div class="detail-item"><label>Emergency Contact Phone</label><input name="emergency_contact_phone" value="${esc(p?.emergency_contact_phone)}" /></div>
+        <div class="detail-item"><label>Call Transcript</label><textarea name="call_transcript" rows="4">${esc(p?.call_transcript)}</textarea></div>
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">${isEdit ? 'Save' : 'Create'}</button>
+        ${isEdit ? `<button type="button" class="btn btn-ghost" onclick="deletePatient('${p.patient_id}')">Delete</button>` : ''}
+      </div>
+    </form>
+  `;
+  document.getElementById('patient-form').onsubmit = async (e) => {
+    e.preventDefault();
+    await submitForm(isEdit ? p.patient_id : null);
+  };
+}
+
+async function submitForm(id) {
+  const form = document.getElementById('patient-form');
+  const data = Object.fromEntries(new FormData(form).entries());
+  const url = id ? `/patients/${id}` : '/patients/';
+  const method = id ? 'PUT' : 'POST';
+  try {
+    const res = await fetch(url, {method, headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
+    const json = await res.json();
+    if (res.ok) {
+      closeModal(null, true);
+      loadPatients();
+    } else {
+      alert(json.error?.message || 'Failed to save');
+    }
+  } catch (e) {
+    alert('Network error');
+  }
+}
+
+async function deletePatient(id) {
+  if (!confirm('Are you sure you want to delete this patient?')) return;
+  try {
+    const res = await fetch(`/patients/${id}`, {method:'DELETE'});
+    const json = await res.json();
+    if (res.ok) {
+      closeModal(null, true);
+      loadPatients();
+    } else {
+      alert(json.error?.message || 'Failed to delete');
+    }
+  } catch (e) {
+    alert('Network error');
+  }
 }
 
 loadPatients();
