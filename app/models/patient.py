@@ -67,20 +67,46 @@ def get_patient(patient_id: str) -> Optional[dict]:
 
 from app.schemas import normalize_phone
 
+def _digits(s: str) -> str:
+    """Return only the digits portion of a stored/normalized phone string."""
+    return re.sub(r"\D", "", s)
+
+
 def find_by_phone(phone_number: str) -> Optional[dict]:
-    """Used by Vapi for duplicate detection.  Normalize input like PatientCreate."""
+    """Used by Vapi for duplicate detection.
+
+    The logic is intentionally forgiving: it normalizes the incoming value,
+    strips any leading plus, and then attempts to match exactly.  If no exact
+    match is found we fall back to a suffix comparison on the digit sequence
+    (minimum 7 digits) which handles cases such as local vs. E.164 formats
+    (e.g. "03001234567" vs "+923001234567").
+    """
     try:
         norm = normalize_phone(phone_number)
     except Exception:
-        # if normalization fails, fall back to raw digits
-        import re
         norm = re.sub(r"\D", "", phone_number)
+
+    # primary lookup: exact match
     with get_db() as conn:
         row = conn.execute(
             "SELECT * FROM patients WHERE phone_number = ? AND deleted_at IS NULL",
             (norm,)
         ).fetchone()
-    return _row_to_dict(row)
+        if row:
+            return _row_to_dict(row)
+
+        # secondary lookup: suffix match
+        target = _digits(norm).lstrip('0')
+        if len(target) >= 7:
+            # read all patients and check suffix in Python
+            rows = conn.execute(
+                "SELECT * FROM patients WHERE deleted_at IS NULL"
+            ).fetchall()
+            for r in rows:
+                stored = r['phone_number'] or ''
+                if target.endswith(_digits(stored)[-len(target):]):
+                    return _row_to_dict(r)
+    return None
 
 
 def create_patient(data: PatientCreate) -> dict:
