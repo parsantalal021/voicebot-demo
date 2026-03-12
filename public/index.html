@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Patient Registry — Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:         #0d0f14;
+      --surface:    #13161e;
+      --surface-2:  #1a1e2a;
+      --border:     #252a38;
+      --accent:     #4f9cf9;
+      --accent-dim: rgba(79,156,249,0.12);
+      --green:      #34d399;
+      --amber:      #fbbf24;
+      --red:        #f87171;
+      --text:       #e8ecf4;
+      --muted:      #6b7491;
+      --card-r:     12px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 400;
+      min-height: 100vh;
+    }
+
+    /* ── Top bar ─────────────────────────────────────────────── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 40px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      position: sticky; top: 0; z-index: 100;
+    }
+    .logo {
+      display: flex; align-items: center; gap: 12px;
+    }
+    .logo-icon {
+      width: 36px; height: 36px;
+      background: var(--accent);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .logo-icon svg { color: white; }
+    .logo-text {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.25rem;
+      letter-spacing: -0.02em;
+    }
+    .logo-sub { font-size: 0.72rem; color: var(--muted); font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; }
+
+    .header-right { display: flex; align-items: center; gap: 20px; }
+    .status-badge {
+      display: flex; align-items: center; gap: 7px;
+      background: rgba(52,211,153,0.1);
+      border: 1px solid rgba(52,211,153,0.25);
+      color: var(--green);
+      padding: 6px 14px;
+      border-radius: 100px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+    }
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+    /* ── Main layout ─────────────────────────────────────────── */
+    main { max-width: 1280px; margin: 0 auto; padding: 40px; }
+
+    /* ── Stats row ───────────────────────────────────────────── */
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 36px; }
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--card-r);
+      padding: 22px 24px;
+      position: relative; overflow: hidden;
+    }
+    .stat-card::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0;
+      height: 2px;
+      background: var(--accent);
+    }
+    .stat-card:nth-child(2)::before { background: var(--green); }
+    .stat-card:nth-child(3)::before { background: var(--amber); }
+    .stat-card:nth-child(4)::before { background: #c084fc; }
+    .stat-label { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.09em; font-weight: 600; margin-bottom: 10px; }
+    .stat-value { font-family: 'DM Serif Display', serif; font-size: 2.4rem; letter-spacing: -0.03em; line-height: 1; }
+
+    /* ── Search bar ──────────────────────────────────────────── */
+    .toolbar {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 20px;
+      align-items: center;
+    }
+    .search-wrap { position: relative; flex: 1; }
+    .search-wrap svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+    input[type="text"] {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.9rem;
+      padding: 11px 16px 11px 42px;
+      border-radius: 8px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    input[type="text"]:focus { border-color: var(--accent); }
+    input[type="text"]::placeholder { color: var(--muted); }
+
+    .btn {
+      padding: 10px 20px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.88rem;
+      font-weight: 600;
+      transition: all 0.15s;
+    }
+    .btn-primary { background: var(--accent); color: white; }
+    .btn-primary:hover { background: #6aaaff; }
+    .btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+    .btn-ghost:hover { color: var(--text); border-color: var(--accent); }
+
+    /* ── Table ───────────────────────────────────────────────── */
+    .table-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--card-r);
+      overflow: hidden;
+    }
+    table { width: 100%; border-collapse: collapse; }
+    thead { background: var(--surface-2); }
+    th {
+      text-align: left;
+      padding: 13px 20px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      white-space: nowrap;
+    }
+    tbody tr {
+      border-top: 1px solid var(--border);
+      transition: background 0.1s;
+      cursor: pointer;
+    }
+    tbody tr:hover { background: var(--surface-2); }
+    td { padding: 14px 20px; font-size: 0.875rem; vertical-align: middle; }
+    .td-name { font-weight: 600; color: var(--text); }
+    .td-id { font-family: 'DM Mono', monospace; font-size: 0.78rem; color: var(--accent); }
+    .td-date { color: var(--muted); font-size: 0.84rem; }
+    .sex-badge {
+      display: inline-flex; align-items: center;
+      padding: 3px 10px;
+      border-radius: 100px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+    }
+    .sex-m { background: rgba(79,156,249,0.12); color: var(--accent); }
+    .sex-f { background: rgba(192,132,252,0.12); color: #c084fc; }
+    .sex-o { background: rgba(251,191,36,0.12); color: var(--amber); }
+    .sex-d { background: rgba(107,116,145,0.12); color: var(--muted); }
+    .ins-chip {
+      display: inline-block;
+      background: rgba(52,211,153,0.08);
+      color: var(--green);
+      border: 1px solid rgba(52,211,153,0.2);
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.72rem;
+      font-weight: 500;
+      max-width: 160px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--muted);
+    }
+    .empty-state svg { margin-bottom: 16px; opacity: 0.4; }
+    .empty-state p { font-size: 0.9rem; }
+
+    /* ── Modal ───────────────────────────────────────────────── */
+    .modal-bg {
+      display: none;
+      position: fixed; inset: 0; z-index: 500;
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(4px);
+      align-items: center; justify-content: center;
+    }
+    .modal-bg.open { display: flex; }
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      width: 700px;
+      max-width: 95vw;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 36px;
+      position: relative;
+    }
+    .modal-close {
+      position: absolute; top: 18px; right: 18px;
+      background: transparent; border: none; cursor: pointer;
+      color: var(--muted); font-size: 1.4rem; line-height: 1;
+      transition: color 0.15s;
+    }
+    .modal-close:hover { color: var(--text); }
+    .modal h2 { font-family: 'DM Serif Display', serif; font-size: 1.5rem; margin-bottom: 4px; }
+    .modal-id { font-family: 'DM Mono', monospace; font-size: 0.78rem; color: var(--accent); margin-bottom: 24px; }
+    .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px 32px; }
+    .detail-item label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; display: block; margin-bottom: 4px; }
+    .detail-item span { font-size: 0.9rem; }
+    .detail-divider { grid-column: 1/-1; border-top: 1px solid var(--border); padding-top: 16px; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); font-weight: 700; }
+    .loading { text-align: center; padding: 80px; color: var(--muted); font-size: 0.9rem; }
+
+    @media (max-width: 900px) {
+      main { padding: 24px 20px; }
+      .stats { grid-template-columns: 1fr 1fr; }
+      header { padding: 16px 20px; }
+    }
+    @media (max-width: 600px) {
+      .stats { grid-template-columns: 1fr; }
+      .detail-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Header -->
+<header>
+  <div class="logo">
+    <div class="logo-icon">
+      <svg width="18" height="18" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+        <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+      </svg>
+    </div>
+    <div>
+      <div class="logo-text">PatientVoice</div>
+      <div class="logo-sub">Registration Dashboard</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="status-badge"><div class="status-dot"></div>API Online</div>
+    <button class="btn btn-ghost" onclick="loadPatients()">↺ Refresh</button>
+  </div>
+</header>
+
+<!-- Main -->
+<main>
+
+  <!-- Stats -->
+  <div class="stats">
+    <div class="stat-card">
+      <div class="stat-label">Total Patients</div>
+      <div class="stat-value" id="stat-total">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Registered Today</div>
+      <div class="stat-value" id="stat-today">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Have Insurance</div>
+      <div class="stat-value" id="stat-insured">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Languages</div>
+      <div class="stat-value" id="stat-langs">—</div>
+    </div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <div class="search-wrap">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+      </svg>
+      <input type="text" id="search-input" placeholder="Search by name, phone, or email…" oninput="filterTable()" />
+    </div>
+    <button class="btn btn-ghost" onclick="clearSearch()">Clear</button>
+  </div>
+
+  <!-- Table -->
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Patient</th>
+          <th>DOB</th>
+          <th>Sex</th>
+          <th>Phone</th>
+          <th>Location</th>
+          <th>Insurance</th>
+          <th>Registered</th>
+        </tr>
+      </thead>
+      <tbody id="patient-tbody">
+        <tr><td colspan="7"><div class="loading">Loading patients…</div></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</main>
+
+<!-- Modal -->
+<div class="modal-bg" id="modal-bg" onclick="closeModal(event)">
+  <div class="modal" id="modal-content">
+    <button class="modal-close" onclick="closeModal(null, true)">✕</button>
+    <div id="modal-body">Loading…</div>
+  </div>
+</div>
+
+<script>
+let allPatients = [];
+
+async function loadPatients() {
+  try {
+    const res = await fetch('/patients/');
+    const json = await res.json();
+    allPatients = json.data?.patients || [];
+    renderTable(allPatients);
+    updateStats(allPatients);
+  } catch (e) {
+    document.getElementById('patient-tbody').innerHTML =
+      `<tr><td colspan="7"><div class="loading" style="color:#f87171">Failed to load patients. Is the server running?</div></td></tr>`;
+  }
+}
+
+function updateStats(patients) {
+  document.getElementById('stat-total').textContent = patients.length;
+
+  const today = new Date().toISOString().split('T')[0];
+  const todayCount = patients.filter(p => p.created_at?.startsWith(today)).length;
+  document.getElementById('stat-today').textContent = todayCount;
+
+  const insured = patients.filter(p => p.insurance_provider).length;
+  document.getElementById('stat-insured').textContent = insured;
+
+  const langs = new Set(patients.map(p => p.preferred_language || 'English').filter(Boolean));
+  document.getElementById('stat-langs').textContent = langs.size;
+}
+
+function renderTable(patients) {
+  const tbody = document.getElementById('patient-tbody');
+  if (!patients.length) {
+    tbody.innerHTML = `<tr><td colspan="7">
+      <div class="empty-state">
+        <svg width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+        </svg>
+        <p>No patients found</p>
+      </div>
+    </td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = patients.map(p => {
+    const sexClass = { Male:'sex-m', Female:'sex-f', Other:'sex-o', 'Decline to Answer':'sex-d' }[p.sex] || 'sex-d';
+    const phone = p.phone_number ? `(${p.phone_number.slice(0,3)}) ${p.phone_number.slice(3,6)}-${p.phone_number.slice(6)}` : '—';
+    const dob = p.date_of_birth ? new Date(p.date_of_birth + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
+    const created = p.created_at ? new Date(p.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—';
+    const shortId = p.patient_id?.split('-')[0].toUpperCase() || '—';
+
+    return `<tr onclick="openModal('${p.patient_id}')">
+      <td>
+        <div class="td-name">${esc(p.first_name)} ${esc(p.last_name)}</div>
+        <div class="td-id">#${shortId}</div>
+      </td>
+      <td class="td-date">${dob}</td>
+      <td><span class="sex-badge ${sexClass}">${p.sex}</span></td>
+      <td class="td-date">${phone}</td>
+      <td class="td-date">${esc(p.city || '—')}, ${esc(p.state || '—')}</td>
+      <td>${p.insurance_provider ? `<span class="ins-chip">${esc(p.insurance_provider)}</span>` : '<span style="color:var(--muted);font-size:0.8rem">None</span>'}</td>
+      <td class="td-date">${created}</td>
+    </tr>`;
+  }).join('');
+}
+
+function filterTable() {
+  const q = document.getElementById('search-input').value.toLowerCase();
+  const filtered = allPatients.filter(p =>
+    `${p.first_name} ${p.last_name}`.toLowerCase().includes(q) ||
+    (p.phone_number || '').includes(q) ||
+    (p.email || '').toLowerCase().includes(q)
+  );
+  renderTable(filtered);
+}
+
+function clearSearch() {
+  document.getElementById('search-input').value = '';
+  renderTable(allPatients);
+}
+
+async function openModal(id) {
+  document.getElementById('modal-bg').classList.add('open');
+  document.getElementById('modal-body').innerHTML = '<div class="loading">Loading record…</div>';
+
+  try {
+    const res = await fetch(`/patients/${id}`);
+    const json = await res.json();
+    const p = json.data?.patient;
+    if (!p) throw new Error('Not found');
+
+    const phone = p.phone_number ? `(${p.phone_number.slice(0,3)}) ${p.phone_number.slice(3,6)}-${p.phone_number.slice(6)}` : '—';
+    const epPhone = p.emergency_contact_phone ? `(${p.emergency_contact_phone.slice(0,3)}) ${p.emergency_contact_phone.slice(3,6)}-${p.emergency_contact_phone.slice(6)}` : '—';
+    const dob = p.date_of_birth ? new Date(p.date_of_birth + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : '—';
+    const created = p.created_at ? new Date(p.created_at).toLocaleString() : '—';
+
+    document.getElementById('modal-body').innerHTML = `
+      <h2>${esc(p.first_name)} ${esc(p.last_name)}</h2>
+      <div class="modal-id">Patient ID: ${p.patient_id}</div>
+      <div class="detail-grid">
+        <div class="detail-item"><label>Date of Birth</label><span>${dob}</span></div>
+        <div class="detail-item"><label>Sex</label><span>${p.sex}</span></div>
+        <div class="detail-item"><label>Phone</label><span>${phone}</span></div>
+        <div class="detail-item"><label>Email</label><span>${esc(p.email || '—')}</span></div>
+        <div class="detail-item"><label>Preferred Language</label><span>${esc(p.preferred_language || 'English')}</span></div>
+        <div class="detail-item"><label>Registered</label><span>${created}</span></div>
+
+        <div class="detail-divider">Address</div>
+        <div class="detail-item"><label>Street</label><span>${esc(p.address_line_1)}${p.address_line_2 ? ', ' + esc(p.address_line_2) : ''}</span></div>
+        <div class="detail-item"><label>City / State / Zip</label><span>${esc(p.city)}, ${esc(p.state)} ${esc(p.zip_code)}</span></div>
+
+        ${p.insurance_provider ? `
+        <div class="detail-divider">Insurance</div>
+        <div class="detail-item"><label>Provider</label><span>${esc(p.insurance_provider)}</span></div>
+        <div class="detail-item"><label>Member ID</label><span>${esc(p.insurance_member_id || '—')}</span></div>
+        ` : ''}
+
+        ${p.emergency_contact_name ? `
+        <div class="detail-divider">Emergency Contact</div>
+        <div class="detail-item"><label>Name</label><span>${esc(p.emergency_contact_name)}</span></div>
+        <div class="detail-item"><label>Phone</label><span>${epPhone}</span></div>
+        ` : ''}
+      </div>
+    `;
+  } catch(e) {
+    document.getElementById('modal-body').innerHTML = '<div class="loading" style="color:#f87171">Failed to load patient record.</div>';
+  }
+}
+
+function closeModal(e, force) {
+  if (force || e?.target === document.getElementById('modal-bg')) {
+    document.getElementById('modal-bg').classList.remove('open');
+  }
+}
+
+function esc(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+loadPatients();
+</script>
+</body>
+</html>
