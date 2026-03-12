@@ -30,24 +30,62 @@ ASSISTANT_ID = os.getenv("VAPI_ASSISTANT_ID", "")
 _debug_log: list[dict] = []
 
 
-# ─── Debug endpoint ───────────────────────────────────────────────────────────
+# ─── Debug endpoints ──────────────────────────────────────────────────────────
 
 @router.get("/debug")
 def get_debug_log():
-    """
-    Visit /vapi/debug after a call to see exactly what Vapi sent.
-    This tells us where the phone number is coming from.
-    """
-    return JSONResponse(content={
-        "total_events": len(_debug_log),
-        "last_20": _debug_log[-20:],
-    })
+    """Visit /vapi/debug after a call to see exactly what Vapi sent."""
+    return JSONResponse(content={"total_events": len(_debug_log), "last_20": _debug_log[-20:]})
 
 
 @router.delete("/debug")
 def clear_debug_log():
     _debug_log.clear()
     return JSONResponse(content={"cleared": True})
+
+
+@router.get("/test-lookup/{phone}")
+def test_lookup(phone: str):
+    """
+    Directly test the DB phone lookup without a real call.
+    GET /vapi/test-lookup/3001234567
+    GET /vapi/test-lookup/+923001234567
+    """
+    import re
+    digits = re.sub(r"\D", "", phone)
+    last10 = digits[-10:] if len(digits) >= 10 else digits
+    try:
+        result = find_by_phone(phone)
+        return JSONResponse(content={
+            "input_raw":    phone,
+            "input_last10": last10,
+            "found":        result is not None,
+            "patient":      result,
+        })
+    except Exception as exc:
+        import traceback
+        return JSONResponse(status_code=500, content={
+            "error":     str(exc),
+            "traceback": traceback.format_exc(),
+        })
+
+
+@router.get("/test-all-phones")
+def test_all_phones():
+    """
+    Lists all phone numbers stored in DB.
+    Use this to see the exact format stored so you can match it.
+    GET /vapi/test-all-phones
+    """
+    from app.database import get_db
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT patient_id, first_name, last_name, phone_number FROM patients WHERE deleted_at IS NULL"
+        ).fetchall()
+    return JSONResponse(content={
+        "count":    len(rows),
+        "patients": [dict(r) for r in rows],
+    })
 
 
 # ─── Main webhook ─────────────────────────────────────────────────────────────
@@ -218,8 +256,11 @@ def _handle_tool_call(tool_call: dict) -> dict:
         else:
             result = {"error": f"Unknown tool: {fn_name}"}
     except Exception as exc:
-        logger.error(f"[VAPI] Tool error ({fn_name}): {exc}", exc_info=True)
-        result = {"error": "An internal error occurred. Please try again."}
+        import traceback
+        tb = traceback.format_exc()
+        logger.error(f"[VAPI] Tool error ({fn_name}): {exc}\n{tb}")
+        # Return the REAL error so we can see it in Vapi logs and Postman
+        result = {"error": f"{type(exc).__name__}: {str(exc)}", "traceback": tb}
 
     return {"toolCallId": tool_call_id, "result": json.dumps(result)}
 
